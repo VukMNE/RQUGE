@@ -2,8 +2,6 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, T5To
 from typing import Dict, List, Set
 import re
 import string
-from peft import PeftModel
-import bitsandbytes
 
 
 class RQUGE(object):
