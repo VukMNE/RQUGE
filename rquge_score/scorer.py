@@ -93,7 +93,7 @@ class RQUGE(object):
 
         if self.language == "sl":
             pred_answer = gams_generate_answer(self.model_qa,
-                                               self.tokenizer_sp,
+                                               self.tokenizer_qa,
                                                pred_question,
                                                context)
         else:
