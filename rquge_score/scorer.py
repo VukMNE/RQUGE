@@ -15,20 +15,20 @@ class RQUGE(object):
             raise ValueError("Please Specify QA Model")
         if language == "sl":
             BASE_ID_GAMS = "cjvt/GaMS-2B-Instruct"
-            self.tokenizer_qa = AutoTokenizer.from_pretrained(qa_model_path, use_fast=False)
+            self.tokenizer_qa = AutoTokenizer.from_pretrained(qa_model_path, use_fast=True)
             if self.tokenizer_qa.pad_token_id is None:
-                self.tokenizer_qa.pad_token = tok.eos_token
-            bnb = BitsAndBytesConfig(load_in_8bit=True)
-            base = AutoModelForCausalLM.from_pretrained(
-                BASE_ID_GAMS,
-                quantization_config=bnb,
+                self.tokenizer_qa.pad_token = self.tokenizer_qa.eos_token
+
+            base =  AutoModelForCausalLM.from_pretrained(
+                qa_model_path,
                 device_map="auto",
+                attn_implementation="eager",
             )
 
             # Resize base embeddings to match tokenizer vocab (we added tokens during training)
             base.resize_token_embeddings(len(self.tokenizer_qa))
 
-            self.model_qa = PeftModel.from_pretrained(base, qa_model_path)
+            self.model_qa = base
         else:
             self.tokenizer_qa = T5Tokenizer.from_pretrained(qa_model_path)
             self.model_qa = T5ForConditionalGeneration.from_pretrained(qa_model_path).to(self.device)
@@ -37,9 +37,23 @@ class RQUGE(object):
         if sp_scorer_path is None:
             raise ValueError("Please Specify Span Scorer Model")
 
-        self.sp_scorer = AutoModelForSequenceClassification.from_pretrained(sp_scorer_path).to(self.device)
-        self.sp_scorer.eval()
-        self.tokenizer_sp = AutoTokenizer.from_pretrained(sp_scorer_path)
+        if language == "sl":
+            self.tokenizer_sp = AutoTokenizer.from_pretrained(sp_scorer_path, use_fast=True)
+            self.sp_scorer = AutoModelForSequenceClassification.from_pretrained(
+                sp_scorer_path  # trained with num_labels=1, problem_type='regression'
+            ).to(self.device)
+            self.sp_scorer.eval()
+
+            # Ensure special tokens exist (angle brackets per your retrain)
+            needed = {"<q>", "<r>", "<c>"}
+            missing = [t for t in needed if t not in self.tokenizer_sp.get_vocab()]
+            if missing:
+                print(f"[WARN] Span-scorer tokenizer is missing {missing}. "
+                      f"Double-check you saved tokenizer with these tokens during fine-tune.")
+        else:
+            self.sp_scorer = AutoModelForSequenceClassification.from_pretrained(sp_scorer_path).to(self.device)
+            self.sp_scorer.eval()
+            self.tokenizer_sp = AutoTokenizer.from_pretrained(sp_scorer_path)
 
     def normalize_answer(self, s):
         """Lower text and remove punctuation, articles and extra whitespace.
