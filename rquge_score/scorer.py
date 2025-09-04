@@ -95,4 +95,4 @@ class RQUGE(object):
                    f" {self.normalize_answer(pred_answer)} <c> {self.normalize_answer(context)}"
         score = self.predict_sp_score(input_sp)
 
-        return score
+        return score, pred_answer
