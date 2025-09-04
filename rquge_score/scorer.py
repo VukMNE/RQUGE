@@ -4,7 +4,7 @@ import re
 import string
 # from peft import PeftModel
 # import bitsandbytes
-from slo_utils import gams_generate_answer
+from .slo_utils import gams_generate_answer
 
 class RQUGE(object):
     def __init__(self, sp_scorer_path=None, qa_model_path=None, device='cpu', language="en"):
