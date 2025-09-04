@@ -18,9 +18,7 @@ setup(
         "torch",
         "transformers",
         "numpy",
-        "sentencepiece",
-        "peft",
-        "bitsandbytes"
+        "sentencepiece"
     ],
     entry_points={
         "console_scripts": [
