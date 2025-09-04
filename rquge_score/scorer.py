@@ -2,7 +2,8 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, T5To
 from typing import Dict, List, Set
 import re
 import string
-
+from peft import PeftModel
+import bitsandbytes
 
 class RQUGE(object):
     def __init__(self, sp_scorer_path=None, qa_model_path=None, device='cpu', language="en"):
@@ -13,11 +14,11 @@ class RQUGE(object):
             raise ValueError("Please Specify QA Model")
         if language == "sl":
             BASE_ID_GAMS = "cjvt/GaMS-2B-Instruct"
-            self.tokenizer_qa = AutoTokenizer.from_pretrained(qa_model_path, use_fast=True)
+            self.tokenizer_qa = AutoTokenizer.from_pretrained(BASE_ID_GAMS, use_fast=True)
             if self.tokenizer_qa.pad_token_id is None:
                 self.tokenizer_qa.pad_token = self.tokenizer_qa.eos_token
 
-            base =  AutoModelForCausalLM.from_pretrained(
+            base = AutoModelForCausalLM.from_pretrained(
                 qa_model_path,
                 device_map="auto",
                 attn_implementation="eager",
@@ -26,7 +27,7 @@ class RQUGE(object):
             # Resize base embeddings to match tokenizer vocab (we added tokens during training)
             base.resize_token_embeddings(len(self.tokenizer_qa))
 
-            self.model_qa = base
+            self.model_qa = PeftModel.from_pretrained(base, qa_model_path)
         else:
             self.tokenizer_qa = T5Tokenizer.from_pretrained(qa_model_path)
             self.model_qa = T5ForConditionalGeneration.from_pretrained(qa_model_path).to(self.device)
