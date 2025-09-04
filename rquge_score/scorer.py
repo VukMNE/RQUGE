@@ -4,10 +4,12 @@ import re
 import string
 # from peft import PeftModel
 # import bitsandbytes
+from slo_utils import gams_generate_answer
 
 class RQUGE(object):
     def __init__(self, sp_scorer_path=None, qa_model_path=None, device='cpu', language="en"):
         self.device = device
+        self.language = language
 
         ## initialize the QA module
         if qa_model_path is None:
@@ -88,8 +90,15 @@ class RQUGE(object):
 
         input_string = pred_question + " \\n " + context
         input_ids = self.tokenizer_qa.encode(input_string, return_tensors="pt").to(self.device)
-        res = self.model_qa.generate(input_ids, max_new_tokens=max_new_tokens)
-        pred_answer = self.tokenizer_qa.batch_decode(res, skip_special_tokens=True)[0]
+
+        if self.language == "sl":
+            pred_answer = gams_generate_answer(self.model_qa,
+                                               self.tokenizer_sp,
+                                               pred_question,
+                                               context)
+        else:
+            res = self.model_qa.generate(input_ids, max_new_tokens=max_new_tokens)
+            pred_answer = self.tokenizer_qa.batch_decode(res, skip_special_tokens=True)[0]
         ## compute the score for the predicted answer span
 
         input_sp = f"{self.normalize_answer(pred_question)} <q> {self.normalize_answer(gold_answer)} <r>" \
@@ -97,3 +106,4 @@ class RQUGE(object):
         score = self.predict_sp_score(input_sp)
 
         return score, pred_answer
+
